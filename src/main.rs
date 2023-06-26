@@ -72,6 +72,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
         let target: &String = matches
             .get_one("client")
             .expect("Target must be set in client mode");
-        client::run(target, port, final_iperf3_params)
+        client::run(target, port, final_iperf3_params).await
     }
 }

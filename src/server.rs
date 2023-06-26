@@ -190,7 +190,7 @@ impl State {
         let ports_len = ports.len() as u16;
 
         // check if the ports are exhausted
-        if ports_len == (self.end_port - self.start_port) {
+        if ports_len == (self.end_port - self.start_port + 1) {
             return None;
         }
 

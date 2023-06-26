@@ -11,6 +11,7 @@ use tokio::net::TcpStream;
 pub async fn run(
     target: &String,
     port: u16,
+    iperf3_path: String,
     iperf3_params: Vec<String>,
 ) -> Result<(), Box<dyn Error>> {
     let address = format!("{}:{}", target, port);
@@ -48,7 +49,7 @@ pub async fn run(
     let captures = captures.unwrap();
     let iperf3_port = &captures[1];
 
-    let mut iperf3_child = Command::new("iperf3")
+    let mut iperf3_child = Command::new(iperf3_path)
         .arg("-c")
         .arg(target)
         .arg("-p")

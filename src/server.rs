@@ -16,6 +16,7 @@ use crate::consts::*;
 pub async fn run(
     bind_address: &String,
     port: u16,
+    iperf3_path: String,
     iperf3_params: Vec<String>,
     start_port: u16,
     end_port: u16,
@@ -26,8 +27,9 @@ pub async fn run(
         .await
         .expect("Failed to bind to address");
     println!("Listening on: {}", addr);
+    println!("Dynamic port range: {}-{}", start_port, end_port);
 
-    let state = State::new(start_port, end_port, iperf3_params)?;
+    let state = State::new(start_port, end_port, iperf3_path, iperf3_params)?;
     let state = Arc::new(Mutex::new(state));
     let cleanup_state = state.clone();
 
@@ -108,6 +110,7 @@ struct State {
     iperf3_instances: HashMap<u16, Iperf3Instance>,
     start_port: u16,
     end_port: u16,
+    iperf3_path: String,
     iperf3_params: Vec<String>,
 }
 
@@ -115,6 +118,7 @@ impl State {
     fn new(
         start_port: u16,
         end_port: u16,
+        iperf3_path: String,
         iperf3_params: Vec<String>,
     ) -> Result<Self, &'static str> {
         if end_port < start_port {
@@ -125,6 +129,7 @@ impl State {
                 iperf3_instances: hash_map,
                 start_port,
                 end_port,
+                iperf3_path,
                 iperf3_params,
             })
         }
@@ -220,7 +225,7 @@ impl State {
 
         let port = port.unwrap();
 
-        let iperf3_child = Command::new("iperf3")
+        let iperf3_child = Command::new(&self.iperf3_path)
             .arg("-s")
             .arg("-1")
             .arg("-p")

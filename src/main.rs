@@ -53,6 +53,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 .default_missing_value("300"),
         )
         .arg(
+            arg!(--"ip-limit" <NUMBER> "Number of concurrent sessions allowed from the same IP")
+                .action(ArgAction::Set)
+                .value_parser(clap::value_parser!(u8))
+                .default_value("3")
+                .default_missing_value("3"),
+        )
+        .arg(
             arg!(--"iperf3-path" <PATH> "Path to the iperf3 executable (only required if iperf3 is not in $PATH)")
                 .action(ArgAction::Set)
         )
@@ -102,6 +109,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             return Ok(());
         }
         let max_age_seconds: u64 = *matches.get_one("max-age").unwrap();
+        let max_instances_by_ip: u8 = *matches.get_one("ip-limit").unwrap();
         server::run(
             final_bind_address,
             port,
@@ -110,6 +118,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             start_port,
             end_port,
             max_age_seconds,
+            max_instances_by_ip,
         )
         .await
     } else {

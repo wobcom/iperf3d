@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::error::Error;
+use std::net::IpAddr;
 use std::process::{Child, Command};
 use std::str;
 use std::sync::Arc;
@@ -21,6 +22,7 @@ pub async fn run(
     start_port: u16,
     end_port: u16,
     max_age_seconds: u64,
+    max_instances_by_ip: u8,
 ) -> Result<(), Box<dyn Error>> {
     let addr = format!("{}:{}", bind_address, port);
     let listener = TcpListener::bind(&addr)
@@ -29,7 +31,7 @@ pub async fn run(
     println!("Listening on: {}", addr);
     println!("Dynamic port range: {}-{}", start_port, end_port);
 
-    let state = State::new(start_port, end_port, iperf3_path, iperf3_params)?;
+    let state = State::new(max_instances_by_ip, start_port, end_port, iperf3_path, iperf3_params)?;
     let state = Arc::new(Mutex::new(state));
     let cleanup_state = state.clone();
 
@@ -61,8 +63,24 @@ pub async fn run(
 
                 let request = str::from_utf8(&buf[0..n]).expect("Failed to parse request");
                 if request.starts_with(PORT_REQUEST_MSG) {
+                    let peer_ip = socket
+                        .peer_addr()
+                        .expect("Failed to extract peer address")
+                        .ip();
+                    
                     let mut guard = thread_state.lock().await;
-                    let port = guard.spawn_iperf3_server();
+                    
+                    if guard.get_instance_count_by_ip(peer_ip) >= guard.max_instances_by_ip as usize {
+                        socket
+                            .write_all(format!("{}\n", IP_LIMIT_REACHED_MSG).as_bytes())
+                            .await
+                            .expect("Failed to write data to socket");
+                        drop(guard);
+                        socket.shutdown().await.expect("Failed to shutdown socket");
+                        return;
+                    }
+                    
+                    let port = guard.spawn_iperf3_server(peer_ip);
                     drop(guard);
 
                     match port {
@@ -102,12 +120,14 @@ pub async fn run(
 
 struct Iperf3Instance {
     spawn_time: Instant,
+    requested_by_ip: IpAddr,
     port: u16,
     child: Option<Child>,
 }
 
 struct State {
     iperf3_instances: HashMap<u16, Iperf3Instance>,
+    max_instances_by_ip: u8,
     start_port: u16,
     end_port: u16,
     iperf3_path: String,
@@ -116,6 +136,7 @@ struct State {
 
 impl State {
     fn new(
+        max_instances_by_ip: u8,
         start_port: u16,
         end_port: u16,
         iperf3_path: String,
@@ -127,6 +148,7 @@ impl State {
             let hash_map: HashMap<u16, Iperf3Instance> = HashMap::new();
             Ok(Self {
                 iperf3_instances: hash_map,
+                max_instances_by_ip,
                 start_port,
                 end_port,
                 iperf3_path,
@@ -177,6 +199,17 @@ impl State {
         }
     }
 
+    fn get_instance_count_by_ip(&self, ip: IpAddr) -> usize {
+        let instances_by_ip: Vec<&Iperf3Instance> = self
+            .iperf3_instances
+            .iter()
+            .map(|(_, instance)| instance)
+            .filter(|instance| instance.requested_by_ip == ip)
+            .collect();
+
+        instances_by_ip.len()
+    }
+
     fn get_next_free_port(&self) -> Option<u16> {
         let used_ports = &self.iperf3_instances;
 
@@ -216,7 +249,7 @@ impl State {
         Some(ports_len + self.start_port)
     }
 
-    fn spawn_iperf3_server(&mut self) -> Option<u16> {
+    fn spawn_iperf3_server(&mut self, requested_by_ip: IpAddr) -> Option<u16> {
         let port = self.get_next_free_port();
 
         if port.is_none() {
@@ -236,6 +269,7 @@ impl State {
 
         let instance = Iperf3Instance {
             spawn_time: Instant::now(),
+            requested_by_ip,
             port: port,
             child: Some(iperf3_child),
         };

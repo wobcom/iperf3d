@@ -36,6 +36,11 @@ pub async fn run(
         println!("All dynamic iperf3 ports are currently in use, please try again later.");
         return Ok(());
     }
+    
+    if response.starts_with(IP_LIMIT_REACHED_MSG) {
+        println!("No more connections are allowed from this IP.");
+        return Ok(());
+    }
 
     let re = Regex::new(format!(r"{}(\d+){}", PORT_RESPONSE_MSG_START, PORT_RESPONSE_MSG_END).as_str()).unwrap();
 

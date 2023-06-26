@@ -1,9 +1,11 @@
 [package]
 name = "iperf3d"
+description = "iperf3 client and server wrapper for dynamic server ports"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+authors = [ "Jennifer Graul <jennifer.graul@wobcom.de>" ]
+license = "MIT"
+repository = "https://github.com/wobcom/iperf3d"
 
 [dependencies]
 async-mutex = "1.4.0"

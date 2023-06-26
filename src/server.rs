@@ -107,7 +107,7 @@ pub async fn run(
                     return;
                 } else {
                     socket
-                        .write_all("unknown-request;\n".as_bytes())
+                        .write_all(format!("{}\n", UNKNOWN_REQUEST_MSG).as_bytes())
                         .await
                         .expect("Failed to write data to socket");
                     socket.shutdown().await.expect("Failed to shutdown socket");

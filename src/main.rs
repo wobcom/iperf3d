@@ -43,8 +43,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let port: u16 = *matches.get_one("port").unwrap();
 
-    println!("Port {}", port);
-
     let final_iperf3_params: Vec<String>;
 
     if let Some(iperf3_params) = iperf3_params {

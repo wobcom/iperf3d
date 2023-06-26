@@ -58,10 +58,7 @@ pub async fn run(
                 }
 
                 let request = str::from_utf8(&buf[0..n]).expect("Failed to parse request");
-                print!("{}", request);
                 if request.starts_with(PORT_REQUEST_MSG) {
-                    println!("Received port request");
-
                     let mut guard = thread_state.lock().await;
                     let port = guard.spawn_iperf3_server();
                     drop(guard);

@@ -11,7 +11,7 @@ use tokio::time::{sleep, Duration};
 
 use async_mutex::Mutex;
 
-const PORT_REQUEST_MSG: &str = "iperf3d-port-request;";
+use crate::consts::*;
 
 pub async fn run(
     bind_address: &String,
@@ -69,13 +69,19 @@ pub async fn run(
                     match port {
                         Some(port) => {
                             socket
-                                .write_all(format!("iperf3d-port: {};\n", port).as_bytes())
+                                .write_all(
+                                    format!(
+                                        "{}{}{}\n",
+                                        PORT_RESPONSE_MSG_START, port, PORT_RESPONSE_MSG_END
+                                    )
+                                    .as_bytes(),
+                                )
                                 .await
                                 .expect("Failed to write data to socket");
                         }
                         None => {
                             socket
-                                .write_all("no-free-ports;\n".as_bytes())
+                                .write_all(format!("{}\n", NO_FREE_PORTS_MSG).as_bytes())
                                 .await
                                 .expect("Failed to write data to socket");
                         }

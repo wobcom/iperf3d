@@ -3,6 +3,7 @@ use std::error::Error;
 
 mod client;
 mod server;
+mod consts;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {

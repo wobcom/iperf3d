@@ -31,7 +31,14 @@ pub async fn run(
     println!("Listening on: {}", addr);
     println!("Dynamic port range: {}-{}", start_port, end_port);
 
-    let state = State::new(max_instances_by_ip, start_port, end_port, iperf3_path, iperf3_params)?;
+    let state = State::new(
+        max_instances_by_ip,
+        start_port,
+        end_port,
+        iperf3_path,
+        iperf3_params,
+        bind_address.clone(),
+    )?;
     let state = Arc::new(Mutex::new(state));
     let cleanup_state = state.clone();
 
@@ -67,10 +74,11 @@ pub async fn run(
                         .peer_addr()
                         .expect("Failed to extract peer address")
                         .ip();
-                    
+
                     let mut guard = thread_state.lock().await;
-                    
-                    if guard.get_instance_count_by_ip(peer_ip) >= guard.max_instances_by_ip as usize {
+
+                    if guard.get_instance_count_by_ip(peer_ip) >= guard.max_instances_by_ip as usize
+                    {
                         socket
                             .write_all(format!("{}\n", IP_LIMIT_REACHED_MSG).as_bytes())
                             .await
@@ -79,7 +87,7 @@ pub async fn run(
                         socket.shutdown().await.expect("Failed to shutdown socket");
                         return;
                     }
-                    
+
                     let port = guard.spawn_iperf3_server(peer_ip);
                     drop(guard);
 
@@ -132,6 +140,7 @@ struct State {
     end_port: u16,
     iperf3_path: String,
     iperf3_params: Vec<String>,
+    bind_address: String,
 }
 
 impl State {
@@ -141,6 +150,7 @@ impl State {
         end_port: u16,
         iperf3_path: String,
         iperf3_params: Vec<String>,
+        bind_address: String,
     ) -> Result<Self, &'static str> {
         if end_port < start_port {
             Err("End port must be bigger than start port")
@@ -153,6 +163,7 @@ impl State {
                 end_port,
                 iperf3_path,
                 iperf3_params,
+                bind_address,
             })
         }
     }
@@ -258,12 +269,20 @@ impl State {
 
         let port = port.unwrap();
 
-        let iperf3_child = Command::new(&self.iperf3_path)
+        let mut iperf3_command = Command::new(&self.iperf3_path);
+        let mut iperf3_command = iperf3_command
             .arg("-s")
             .arg("-1")
             .arg("-p")
-            .arg(port.to_string())
-            .args(&self.iperf3_params)
+            .arg(port.to_string());
+
+        if self.bind_address != BIND_ALL_ADDRESS {
+            iperf3_command = iperf3_command.arg("-B").arg(&self.bind_address)
+        }
+        
+        iperf3_command = iperf3_command.args(&self.iperf3_params);
+
+        let iperf3_child = iperf3_command
             .spawn()
             .expect("Failed to spawn iperf3 server");
 

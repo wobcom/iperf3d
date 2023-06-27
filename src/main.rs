@@ -96,7 +96,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     if server_mode {
         let final_bind_address: &String;
         let bind_address = matches.get_one("bind");
-        let bind_all = "[::]".to_string();
+        let bind_all = consts::BIND_ALL_ADDRESS.to_string();
         if let Some(bind_address) = bind_address {
             final_bind_address = bind_address;
         } else {

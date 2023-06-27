@@ -25,6 +25,10 @@ Options:
   -V, --version             Print version
 ```
 
+### iperf3 path
+
+If `iperf3` not in your `$PATH`, you can set the path to it via the `--iperf3-path` option or via the `IPERF3D_IPERF3_PATH` environment variable. Note: the command line option will override the environment variable.
+
 ## Server usage
 
 Like `iperf3`, you can start a `iperf3d` server with:

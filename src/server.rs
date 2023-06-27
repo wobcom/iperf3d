@@ -279,7 +279,7 @@ impl State {
         if self.bind_address != BIND_ALL_ADDRESS {
             iperf3_command = iperf3_command.arg("-B").arg(&self.bind_address)
         }
-        
+
         iperf3_command = iperf3_command.args(&self.iperf3_params);
 
         let iperf3_child = iperf3_command

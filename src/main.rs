@@ -1,5 +1,6 @@
 use clap::{arg, command, ArgAction};
 use std::error::Error;
+use std::env;
 
 mod client;
 mod consts;
@@ -85,9 +86,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let port: u16 = *matches.get_one("port").unwrap();
 
-    let iperf3_path: Option<&String> = matches.get_one("iperf3-path");
-    let iperf3_path = match iperf3_path {
-        None => "iperf3".to_string(),
+    let iperf3_env_path = env::var("IPERF3D_IPERF3_PATH");
+    let iperf3_arg_path: Option<&String> = matches.get_one("iperf3-path");
+
+    let iperf3_path = match iperf3_arg_path {
+        None => match iperf3_env_path {
+            Ok(path) => path.to_string(),
+            Err(_) => "iperf3".to_string(),
+        },
         Some(path) => path.to_string(),
     };
 
